@@ -212,26 +212,21 @@
         ];
 
         let peer = null;
-        let conexoes = []; // Usado se for Host
-        let conexaoUnica = null; // Usado se for Convidado
-        let meuId = '';
+        let conexoes = []; 
+        let conexaoUnica = null; 
         let meuNome = '';
         let ehHost = false;
         let anguloAtual = 0;
         let emGiro = false;
         let listaJogadores = [];
 
-        function gerarIdAleatorio() {
-            return Math.random().toString(36.substring(2, 8));
-        }
-
         function criarSala() {
             meuNome = document.getElementById('inputNome').value.trim() || "Anônimo";
-            meuId = "vd-" + Math.random().toString(36).substring(2, 8);
+            const idAleatorio = "vd-" + Math.random().toString(36).substring(2, 8);
             ehHost = true;
             listaJogadores = [meuNome];
 
-            peer = new Peer(meuId);
+            peer = new Peer(idAleatorio);
 
             peer.on('open', (id) => {
                 document.getElementById('menuScreen').classList.add('hidden');
@@ -240,23 +235,32 @@
                 atualizarListaJogadores();
             });
 
-            // Quando alguém se conecta na sala do Host
             peer.on('connection', (conn) => {
                 conexoes.push(conn);
 
                 conn.on('data', (dados) => {
                     if (dados.tipo === 'ENTRAR') {
-                        listaJogadores.push(dados.nome);
+                        if (!listaJogadores.includes(dados.nome)) {
+                            listaJogadores.push(dados.nome);
+                        }
                         sincronizarParaTodos({ tipo: 'ATUALIZAR_JOGADORES', jogadores: listaJogadores });
                     } else if (dados.tipo === 'GIRAR') {
-                        // Se cliente pediu para girar, o host executa e espalha
                         executarGiroRemoto(dados.angulo, dados.titulo, dados.texto);
+                        conexoes.forEach(c => {
+                            if (c !== conn) {
+                                c.send({ tipo: 'GIRAR', angulo: dados.angulo, titulo: dados.titulo, texto: dados.texto });
+                            }
+                        });
                     }
                 });
 
                 conn.on('close', () => {
                     conexoes = conexoes.filter(c => c !== conn);
                 });
+            });
+
+            peer.on('error', (err) => {
+                alert("Erro ao criar sala. Tente novamente.");
             });
         }
 
@@ -280,7 +284,6 @@
                     document.getElementById('gameScreen').classList.remove('hidden');
                     document.getElementById('roomCodeDisplay').textContent = `Conectado na Sala`;
 
-                    // Avisa o host que entrou
                     conexaoUnica.send({ tipo: 'ENTRAR', nome: meuNome });
                 });
 
@@ -311,7 +314,6 @@
         function tentarGirar() {
             if (emGiro) return;
 
-            // Sorteia o resultado localmente
             const tipo = Math.random() < 0.5 ? 'verdade' : 'desafio';
             let titulo = "", texto = "";
             if (tipo === 'verdade') {
@@ -328,12 +330,10 @@
 
             if (ehHost) {
                 executarGiroRemoto(anguloAtual, titulo, texto);
-                // Envia para os outros clientes conectados
                 conexoes.forEach(conn => {
                     conn.send({ tipo: 'GIRAR', angulo: anguloAtual, titulo: titulo, texto: texto });
                 });
             } else {
-                // Se for convidado, manda o comando para o host rodar e espalhar
                 if (conexaoUnica && conexaoUnica.open) {
                     conexaoUnica.send({ tipo: 'GIRAR', angulo: anguloAtual, titulo: titulo, texto: texto });
                 }
@@ -341,7 +341,6 @@
         }
 
         function executarGiroRemoto(angulo, titulo, texto) {
-            anguloAtual = angulo;
             animarGarrafa(angulo, titulo, texto);
         }
 
