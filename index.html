@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verdade ou Desafio - Garrafinha</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e1e2f, #2a2a40);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #ffcc00;
+            text-align: center;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: #aaa;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .game-container {
+            position: relative;
+            width: 320px;
+            height: 320px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            margin-bottom: 30px;
+        }
+
+        /* A Garrafa */
+        #bottle {
+            width: 80px;
+            height: 220px;
+            cursor: pointer;
+            transition: transform 3s cubic-bezier(0.15, 0.9, 0.2, 1);
+            filter: drop-shadow(0px 5px 10px rgba(0,0,0,0.5));
+            z-index: 2;
+        }
+
+        /* Base circular decorativa */
+        .circle-base {
+            position: absolute;
+            width: 90%;
+            height: 90%;
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .btn-girar {
+            background: linear-gradient(135deg, #ff416c, #ff4b2b);
+            color: white;
+            border: none;
+            padding: 14px 35px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 65, 108, 0.4);
+            transition: all 0.2s ease;
+            margin-bottom: 25px;
+        }
+
+        .btn-girar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 65, 108, 0.6);
+        }
+
+        .btn-girar:active {
+            transform: translateY(1px);
+        }
+
+        .btn-girar:disabled {
+            background: #555;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* Modal / Caixa de Resultado */
+        .result-card {
+            background: rgba(40, 40, 60, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 20px 30px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .result-card h3 {
+            font-size: 1.4rem;
+            margin-bottom: 10px;
+            color: #00ffcc;
+        }
+
+        .result-card p {
+            font-size: 1.1rem;
+            line-height: 1.5;
+            color: #fff;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Verdade ou Desafio</h1>
+    <p class="subtitle">Reúna os amigos em roda, clique no botão e deixe a garrafa decidir!</p>
+
+    <div class="game-container">
+        <div class="circle-base"></div>
+        <!-- Desenho vetorial estilizado de uma garrafa -->
+        <svg id="bottle" viewBox="0 0 100 300" onclick="girarGarrafa()">
+            <!-- Corpo da Garrafa -->
+            <path d="M 35 70 L 35 270 Q 35 290 50 290 Q 65 290 65 270 L 65 70 Z" fill="#2ecc71" stroke="#27ae60" stroke-width="3"/>
+            <!-- Rótulo -->
+            <rect x="38" y="130" width="24" height="80" fill="#ffffff" opacity="0.8" rx="4"/>
+            <!-- Gargalo -->
+            <path d="M 42 30 L 42 70 L 58 70 L 58 30 Z" fill="#2ecc71" stroke="#27ae60" stroke-width="2"/>
+            <!-- Tampa -->
+            <rect x="40" y="15" width="20" height="15" rx="3" fill="#e74c3c" stroke="#c0392b" stroke-width="2"/>
+        </svg>
+    </div>
+
+    <button id="btnGirar" class="btn-girar" onclick="girarGarrafa()">GIRAR A GARRAFA</button>
+
+    <div id="resultCard" class="result-card">
+        <h3 id="resultTitle"></h3>
+        <p id="resultText"></p>
+    </div>
+
+    <script>
+        const verdades = [
+            "Qual foi a coisa mais vergonhosa que você já fez na escola?",
+            "Se você pudesse trocar de vida com alguém aqui na sala por um dia, quem seria?",
+            "Qual é o seu maior medo secreto?",
+            "Você já mandou mensagem para a pessoa errada e se deu mal? O que aconteceu?",
+            "Qual foi a mentira mais bobá que você já contou para os seus pais?",
+            "Quem foi a última pessoa que você stalkeou nas redes sociais?",
+            "Qual é o hábito mais estranho que você tem quando está sozinho em casa?",
+            "Se você só pudesse comer uma única coisa pelo resto da vida, o que seria?"
+        ];
+
+        const desafios = [
+            "Deixe o grupo escolher uma música e mande um áudio cantando o refrão dela para o seu último contato do WhatsApp.",
+            "Faça sua melhor imitação de algum famoso por 30 segundos.",
+            "Fique sem falar até a sua próxima rodada.",
+            "Deixe que alguém mude o seu penteado ou mexa no seu cabelo do jeito que quiser.",
+            "Finja que você é um vendedor de porta em porta e tente vender um objeto qualquer para alguém da roda por 1 minuto.",
+            "Mande a última foto da sua galeria sem explicar absolutamente nada no grupo de família.",
+            "Faça 15 flexões ou agachamentos agora mesmo.",
+            "Imite um robô com defeito até a sua próxima vez."
+        ];
+
+        let anguloAtual = 0;
+        let emGiro = false;
+
+        function girarGarrafa() {
+            if (emGiro) return;
+            emGiro = true;
+
+            const btn = document.getElementById('btnGirar');
+            const bottle = document.getElementById('bottle');
+            const card = document.getElementById('resultCard');
+
+            btn.disabled = true;
+            card.style.display = 'none';
+
+            // Sorteia voltas completas extras (entre 5 e 10) + um ângulo aleatório
+            const voltasExtras = Math.floor(Math.random() * 6) + 5;
+            const anguloAleatorio = Math.floor(Math.random() * 360);
+            anguloAtual += (voltasExtras * 360) + anguloAleatorio;
+
+            bottle.style.transform = `rotate(${anguloAtual}deg)`;
+
+            // Quando a animação CSS termina (3 segundos)
+            setTimeout(() => {
+                emGiro = false;
+                btn.disabled = false;
+                mostrarMensagemSorteada();
+            }, 3000);
+        }
+
+        function mostrarMensagemSorteada() {
+            const tipo = Math.random() < 0.5 ? 'verdade' : 'desafio';
+            const card = document.getElementById('resultCard');
+            const title = document.getElementById('resultTitle');
+            const text = document.getElementById('resultText');
+
+            if (tipo === 'verdade') {
+                const pergunta = verdades[Math.floor(Math.random() * verdades.length)];
+                title.textContent = "🤔 VERDADE";
+                text.textContent = pergunta;
+            } else {
+                const desafio = desafios[Math.floor(Math.random() * desafios.length)];
+                title.textContent = "🔥 DESAFIO";
+                text.textContent = desafio;
+            }
+
+            card.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
