@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verdade ou Desafio - Garrafinha</title>
+    <title>Verdade ou Desafio Online P2P</title>
+    <!-- Importa o PeerJS para conexão P2P sem servidor -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -20,216 +22,348 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            overflow-x: hidden;
             padding: 20px;
         }
 
         h1 {
             font-size: 2rem;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             color: #ffcc00;
             text-align: center;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
 
         .subtitle {
-            font-size: 1rem;
+            font-size: 0.95rem;
             color: #aaa;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
             text-align: center;
+        }
+
+        .screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 400px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #00b09b, #96c93d);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #ff416c, #ff4b2b);
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        #gameScreen {
+            max-width: 600px;
+        }
+
+        .room-info {
+            background: rgba(0,0,0,0.3);
+            padding: 8px 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: #00ffcc;
         }
 
         .game-container {
             position: relative;
-            width: 320px;
-            height: 320px;
+            width: 280px;
+            height: 280px;
             display: flex;
             align-items: center;
             justify-content: center;
             background: rgba(255, 255, 255, 0.05);
             border-radius: 50%;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            margin-bottom: 30px;
+            border: 1px dashed rgba(255, 255, 255, 0.2);
+            margin-bottom: 20px;
         }
 
-        /* A Garrafa */
         #bottle {
-            width: 80px;
-            height: 220px;
+            width: 70px;
+            height: 200px;
             cursor: pointer;
             transition: transform 3s cubic-bezier(0.15, 0.9, 0.2, 1);
             filter: drop-shadow(0px 5px 10px rgba(0,0,0,0.5));
-            z-index: 2;
         }
 
-        /* Base circular decorativa */
-        .circle-base {
-            position: absolute;
-            width: 90%;
-            height: 90%;
-            border: 2px dashed rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            pointer-events: none;
-        }
-
-        .btn-girar {
-            background: linear-gradient(135deg, #ff416c, #ff4b2b);
-            color: white;
-            border: none;
-            padding: 14px 35px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            border-radius: 50px;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(255, 65, 108, 0.4);
-            transition: all 0.2s ease;
-            margin-bottom: 25px;
-        }
-
-        .btn-girar:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255, 65, 108, 0.6);
-        }
-
-        .btn-girar:active {
-            transform: translateY(1px);
-        }
-
-        .btn-girar:disabled {
-            background: #555;
-            cursor: not-allowed;
-            box-shadow: none;
-        }
-
-        /* Modal / Caixa de Resultado */
         .result-card {
             background: rgba(40, 40, 60, 0.95);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 20px 30px;
-            border-radius: 15px;
+            padding: 15px 25px;
+            border-radius: 12px;
             text-align: center;
-            max-width: 400px;
             width: 100%;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            display: none;
-            animation: fadeIn 0.3s ease;
+            min-height: 90px;
         }
 
         .result-card h3 {
-            font-size: 1.4rem;
-            margin-bottom: 10px;
+            font-size: 1.2rem;
+            margin-bottom: 5px;
             color: #00ffcc;
         }
 
         .result-card p {
-            font-size: 1.1rem;
-            line-height: 1.5;
-            color: #fff;
+            font-size: 1rem;
+            line-height: 1.4;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.9); }
-            to { opacity: 1; transform: scale(1); }
+        .players-list {
+            margin-top: 15px;
+            font-size: 0.85rem;
+            color: #ccc;
         }
     </style>
 </head>
 <body>
 
-    <h1>Verdade ou Desafio</h1>
-    <p class="subtitle">Reúna os amigos em roda, clique no botão e deixe a garrafa decidir!</p>
-
-    <div class="game-container">
-        <div class="circle-base"></div>
-        <!-- Desenho vetorial estilizado de uma garrafa -->
-        <svg id="bottle" viewBox="0 0 100 300" onclick="girarGarrafa()">
-            <!-- Corpo da Garrafa -->
-            <path d="M 35 70 L 35 270 Q 35 290 50 290 Q 65 290 65 270 L 65 70 Z" fill="#2ecc71" stroke="#27ae60" stroke-width="3"/>
-            <!-- Rótulo -->
-            <rect x="38" y="130" width="24" height="80" fill="#ffffff" opacity="0.8" rx="4"/>
-            <!-- Gargalo -->
-            <path d="M 42 30 L 42 70 L 58 70 L 58 30 Z" fill="#2ecc71" stroke="#27ae60" stroke-width="2"/>
-            <!-- Tampa -->
-            <rect x="40" y="15" width="20" height="15" rx="3" fill="#e74c3c" stroke="#c0392b" stroke-width="2"/>
-        </svg>
+    <!-- TELA 1: MENU INICIAL -->
+    <div id="menuScreen" class="screen">
+        <h1>Verdade ou Desafio</h1>
+        <p class="subtitle">Sala Realtime P2P (Sem Servidor)</p>
+        
+        <input type="text" id="inputNome" placeholder="Seu Apelido" maxlength="15">
+        <button class="btn" onclick="criarSala()">Criar Nova Sala</button>
+        
+        <p style="margin: 10px 0; color: #888; font-size: 0.9rem;">ou entre em uma:</p>
+        
+        <input type="text" id="inputCodigoSala" placeholder="Código da Sala">
+        <button class="btn btn-secondary" onclick="entrarSala()">Entrar na Sala</button>
     </div>
 
-    <button id="btnGirar" class="btn-girar" onclick="girarGarrafa()">GIRAR A GARRAFA</button>
+    <!-- TELA 2: O JOGO -->
+    <div id="gameScreen" class="screen hidden">
+        <div class="room-info" id="roomCodeDisplay">Código da Sala: ...</div>
+        
+        <div class="game-container">
+            <svg id="bottle" viewBox="0 0 100 300" onclick="tentarGirar()">
+                <path d="M 35 70 L 35 270 Q 35 290 50 290 Q 65 290 65 270 L 65 70 Z" fill="#2ecc71" stroke="#27ae60" stroke-width="3"/>
+                <rect x="38" y="130" width="24" height="80" fill="#ffffff" opacity="0.8" rx="4"/>
+                <path d="M 42 30 L 42 70 L 58 70 L 58 30 Z" fill="#2ecc71" stroke="#27ae60" stroke-width="2"/>
+                <rect x="40" y="15" width="20" height="15" rx="3" fill="#e74c3c" stroke="#c0392b" stroke-width="2"/>
+            </svg>
+        </div>
 
-    <div id="resultCard" class="result-card">
-        <h3 id="resultTitle"></h3>
-        <p id="resultText"></p>
+        <button id="btnGirar" class="btn btn-secondary" onclick="tentarGirar()">GIRAR A GARRAFA</button>
+
+        <div id="resultCard" class="result-card">
+            <h3 id="resultTitle">Aguardando jogada...</h3>
+            <p id="resultText">Gire a garrafa para sortear uma Verdade ou Desafio!</p>
+        </div>
+
+        <div class="players-list" id="playersList">Conectados: 1</div>
     </div>
 
     <script>
         const verdades = [
             "Qual foi a coisa mais vergonhosa que você já fez na escola?",
-            "Se você pudesse trocar de vida com alguém aqui na sala por um dia, quem seria?",
+            "Se você pudesse trocar de vida com alguém aqui por um dia, quem seria?",
             "Qual é o seu maior medo secreto?",
-            "Você já mandou mensagem para a pessoa errada e se deu mal? O que aconteceu?",
             "Qual foi a mentira mais bobá que você já contou para os seus pais?",
             "Quem foi a última pessoa que você stalkeou nas redes sociais?",
-            "Qual é o hábito mais estranho que você tem quando está sozinho em casa?",
-            "Se você só pudesse comer uma única coisa pelo resto da vida, o que seria?"
+            "Qual é o hábito mais estranho que você tem quando está sozinho?"
         ];
 
         const desafios = [
-            "Deixe o grupo escolher uma música e mande um áudio cantando o refrão dela para o seu último contato do WhatsApp.",
+            "Mande um áudio cantando o refrão de uma música no último grupo de WhatsApp que você abriu.",
             "Faça sua melhor imitação de algum famoso por 30 segundos.",
             "Fique sem falar até a sua próxima rodada.",
-            "Deixe que alguém mude o seu penteado ou mexa no seu cabelo do jeito que quiser.",
-            "Finja que você é um vendedor de porta em porta e tente vender um objeto qualquer para alguém da roda por 1 minuto.",
-            "Mande a última foto da sua galeria sem explicar absolutamente nada no grupo de família.",
-            "Faça 15 flexões ou agachamentos agora mesmo.",
-            "Imite um robô com defeito até a sua próxima vez."
+            "Mande a última foto da sua galeria no chat sem explicar nada.",
+            "Faça 15 flexões ou agachamentos agora mesmo."
         ];
 
+        let peer = null;
+        let conexoes = []; // Usado se for Host
+        let conexaoUnica = null; // Usado se for Convidado
+        let meuId = '';
+        let meuNome = '';
+        let ehHost = false;
         let anguloAtual = 0;
         let emGiro = false;
+        let listaJogadores = [];
 
-        function girarGarrafa() {
+        function gerarIdAleatorio() {
+            return Math.random().toString(36.substring(2, 8));
+        }
+
+        function criarSala() {
+            meuNome = document.getElementById('inputNome').value.trim() || "Anônimo";
+            meuId = "vd-" + Math.random().toString(36).substring(2, 8);
+            ehHost = true;
+            listaJogadores = [meuNome];
+
+            peer = new Peer(meuId);
+
+            peer.on('open', (id) => {
+                document.getElementById('menuScreen').classList.add('hidden');
+                document.getElementById('gameScreen').classList.remove('hidden');
+                document.getElementById('roomCodeDisplay').textContent = `Código da Sala: ${id}`;
+                atualizarListaJogadores();
+            });
+
+            // Quando alguém se conecta na sala do Host
+            peer.on('connection', (conn) => {
+                conexoes.push(conn);
+
+                conn.on('data', (dados) => {
+                    if (dados.tipo === 'ENTRAR') {
+                        listaJogadores.push(dados.nome);
+                        sincronizarParaTodos({ tipo: 'ATUALIZAR_JOGADORES', jogadores: listaJogadores });
+                    } else if (dados.tipo === 'GIRAR') {
+                        // Se cliente pediu para girar, o host executa e espalha
+                        executarGiroRemoto(dados.angulo, dados.titulo, dados.texto);
+                    }
+                });
+
+                conn.on('close', () => {
+                    conexoes = conexoes.filter(c => c !== conn);
+                });
+            });
+        }
+
+        function entrarSala() {
+            meuNome = document.getElementById('inputNome').value.trim() || "Anônimo";
+            const codigoSala = document.getElementById('inputCodigoSala').value.trim();
+
+            if (!codigoSala) {
+                alert("Digite o código da sala!");
+                return;
+            }
+
+            ehHost = false;
+            peer = new Peer();
+
+            peer.on('open', () => {
+                conexaoUnica = peer.connect(codigoSala);
+
+                conexaoUnica.on('open', () => {
+                    document.getElementById('menuScreen').classList.add('hidden');
+                    document.getElementById('gameScreen').classList.remove('hidden');
+                    document.getElementById('roomCodeDisplay').textContent = `Conectado na Sala`;
+
+                    // Avisa o host que entrou
+                    conexaoUnica.send({ tipo: 'ENTRAR', nome: meuNome });
+                });
+
+                conexaoUnica.on('data', (dados) => {
+                    if (dados.tipo === 'ATUALIZAR_JOGADORES') {
+                        listaJogadores = dados.jogadores;
+                        atualizarListaJogadores();
+                    } else if (dados.tipo === 'GIRAR') {
+                        animarGarrafa(dados.angulo, dados.titulo, dados.texto);
+                    }
+                });
+
+                conexaoUnica.on('error', (err) => {
+                    alert("Erro ao conectar na sala. Verifique o código.");
+                });
+            });
+        }
+
+        function sincronizarParaTodos(dados) {
+            atualizarListaJogadores();
+            conexoes.forEach(conn => conn.send(dados));
+        }
+
+        function atualizarListaJogadores() {
+            document.getElementById('playersList').textContent = `Jogadores na Sala: ${listaJogadores.join(', ')}`;
+        }
+
+        function tentarGirar() {
             if (emGiro) return;
-            emGiro = true;
 
-            const btn = document.getElementById('btnGirar');
-            const bottle = document.getElementById('bottle');
-            const card = document.getElementById('resultCard');
+            // Sorteia o resultado localmente
+            const tipo = Math.random() < 0.5 ? 'verdade' : 'desafio';
+            let titulo = "", texto = "";
+            if (tipo === 'verdade') {
+                titulo = "🤔 VERDADE";
+                texto = verdades[Math.floor(Math.random() * verdades.length)];
+            } else {
+                titulo = "🔥 DESAFIO";
+                texto = desafios[Math.floor(Math.random() * desafios.length)];
+            }
 
-            btn.disabled = true;
-            card.style.display = 'none';
-
-            // Sorteia voltas completas extras (entre 5 e 10) + um ângulo aleatório
             const voltasExtras = Math.floor(Math.random() * 6) + 5;
             const anguloAleatorio = Math.floor(Math.random() * 360);
             anguloAtual += (voltasExtras * 360) + anguloAleatorio;
 
-            bottle.style.transform = `rotate(${anguloAtual}deg)`;
+            if (ehHost) {
+                executarGiroRemoto(anguloAtual, titulo, texto);
+                // Envia para os outros clientes conectados
+                conexoes.forEach(conn => {
+                    conn.send({ tipo: 'GIRAR', angulo: anguloAtual, titulo: titulo, texto: texto });
+                });
+            } else {
+                // Se for convidado, manda o comando para o host rodar e espalhar
+                if (conexaoUnica && conexaoUnica.open) {
+                    conexaoUnica.send({ tipo: 'GIRAR', angulo: anguloAtual, titulo: titulo, texto: texto });
+                }
+            }
+        }
 
-            // Quando a animação CSS termina (3 segundos)
+        function executarGiroRemoto(angulo, titulo, texto) {
+            anguloAtual = angulo;
+            animarGarrafa(angulo, titulo, texto);
+        }
+
+        function animarGarrafa(angulo, titulo, texto) {
+            emGiro = true;
+            const btn = document.getElementById('btnGirar');
+            const bottle = document.getElementById('bottle');
+            const cardTitle = document.getElementById('resultTitle');
+            const cardText = document.getElementById('resultText');
+
+            btn.disabled = true;
+            cardTitle.textContent = "Girando...";
+            cardText.textContent = "A garrafa está rodando...";
+
+            bottle.style.transform = `rotate(${angulo}deg)`;
+
             setTimeout(() => {
                 emGiro = false;
                 btn.disabled = false;
-                mostrarMensagemSorteada();
+                cardTitle.textContent = titulo;
+                cardText.textContent = texto;
             }, 3000);
-        }
-
-        function mostrarMensagemSorteada() {
-            const tipo = Math.random() < 0.5 ? 'verdade' : 'desafio';
-            const card = document.getElementById('resultCard');
-            const title = document.getElementById('resultTitle');
-            const text = document.getElementById('resultText');
-
-            if (tipo === 'verdade') {
-                const pergunta = verdades[Math.floor(Math.random() * verdades.length)];
-                title.textContent = "🤔 VERDADE";
-                text.textContent = pergunta;
-            } else {
-                const desafio = desafios[Math.floor(Math.random() * desafios.length)];
-                title.textContent = "🔥 DESAFIO";
-                text.textContent = desafio;
-            }
-
-            card.style.display = 'block';
         }
     </script>
 </body>
